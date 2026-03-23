@@ -59,10 +59,6 @@ def run_depth_pro(samples):
         stem = img_name.split(".")[0]
         image = Image.open(os.path.join(DATASET_DIR, img_name)).convert("RGB")
         inputs = processor(images=image, return_tensors="pt").to("cuda")
-        with torch.no_grad():
-            _, t = timed(lambda: model(**inputs))
-        outputs = model(**inputs)  # re-run to get outputs (timed was a dry run for sync)
-        # Actually just do it properly:
         t0 = time.time()
         with torch.no_grad():
             outputs = model(**inputs)
@@ -85,6 +81,10 @@ def run_moge2(samples):
     ensure_dirs(name)
     print(f"\n{'='*60}\nRunning {name}\n{'='*60}")
 
+    # Pin utils3d to the commit MoGe requires (newer versions break the API)
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--force-reinstall",
+        "utils3d @ git+https://github.com/EasternJournalist/utils3d.git"
+        "@9a4eb15e4021b67b12c460c7057d642626897ec1"])
     try:
         from moge.model.v2 import MoGeModel
     except ImportError:
@@ -130,8 +130,8 @@ def run_depthfm(samples):
     if not os.path.isdir(depthfm_dir):
         print("  Cloning DepthFM repo...")
         subprocess.check_call(["git", "clone", "https://github.com/CompVis/depth-fm.git", depthfm_dir])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "-r",
-                               os.path.join(depthfm_dir, "requirements.txt")])
+    # Install deps — skip pinned torch version but keep torchdiffeq and others
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "torchdiffeq", "einops", "omegaconf"])
 
     if not os.path.exists(ckpt_path):
         print("  Downloading DepthFM checkpoint (~1.7GB)...")
@@ -191,8 +191,8 @@ def run_pixel_perfect(samples):
         print("  Cloning pixel-perfect-depth repo...")
         subprocess.check_call(["git", "clone",
                                "https://github.com/gangweix/pixel-perfect-depth", ppd_dir])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "-r",
-                               os.path.join(ppd_dir, "requirements.txt")])
+    # timm and einops are needed for the DINOv2 backbone import
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "timm", "einops"])
 
     input_dir = os.path.join(BASE_DIR, name, "_input")
     out_dir   = os.path.join(BASE_DIR, name, "_raw_output")
@@ -267,7 +267,7 @@ def run_vggt(samples):
 
             if "depth" in predictions:
                 depth = predictions["depth"][0].cpu().numpy()
-                if depth.ndim == 3:
+                while depth.ndim > 2:
                     depth = depth[0]
                 save_depth(depth, stem, name)
             print(f"  {img_name} ({times[-1]:.3f}s)")
@@ -295,6 +295,11 @@ def run_depth_anything_v3(samples):
         subprocess.check_call(["git", "clone",
                                "https://github.com/ByteDance-Seed/Depth-Anything-3", da3_dir])
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "-e", da3_dir])
+
+    # Same utils3d pin as MoGe2 — DA3 uses the same lib
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--force-reinstall",
+        "utils3d @ git+https://github.com/EasternJournalist/utils3d.git"
+        "@9a4eb15e4021b67b12c460c7057d642626897ec1"])
 
     sys.path.insert(0, da3_dir)
     try:
