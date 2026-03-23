@@ -132,6 +132,9 @@ def run_depthfm(samples):
         subprocess.check_call(["git", "clone", "https://github.com/CompVis/depth-fm.git", depthfm_dir])
     # Install deps — skip pinned torch version but keep torchdiffeq and others
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "torchdiffeq", "einops", "omegaconf"])
+    # Flush import cache so newly installed torchdiffeq is visible in this process
+    import importlib
+    importlib.invalidate_caches()
 
     if not os.path.exists(ckpt_path):
         print("  Downloading DepthFM checkpoint (~1.7GB)...")
@@ -207,7 +210,7 @@ def run_pixel_perfect(samples):
 
     t0 = time.time()
     result = subprocess.run(
-        [sys.executable, "run.py", "--input", input_dir, "--output", out_dir],
+        [sys.executable, "run.py", "--img_path", input_dir, "--outdir", out_dir, "--save_npy"],
         cwd=ppd_dir, capture_output=True, text=True, timeout=7200
     )
     total_time = time.time() - t0
@@ -265,11 +268,17 @@ def run_vggt(samples):
             torch.cuda.synchronize()
             times.append(time.time() - t0)
 
-            if "depth" in predictions:
-                depth = predictions["depth"][0].cpu().numpy()
+            # VGGT may use "depth_map" or "depth" depending on version
+            depth_key = next((k for k in ["depth_map", "depth"] if k in predictions), None)
+            if depth_key:
+                depth = predictions[depth_key].cpu().float().numpy()
+                # Unwrap all batch/channel dims to get (H, W)
                 while depth.ndim > 2:
                     depth = depth[0]
-                save_depth(depth, stem, name)
+                if depth.ndim == 2:
+                    save_depth(depth, stem, name)
+                else:
+                    print(f"  WARNING: unexpected depth shape {depth.shape}, skipping")
             print(f"  {img_name} ({times[-1]:.3f}s)")
 
         del model
@@ -300,6 +309,12 @@ def run_depth_anything_v3(samples):
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--force-reinstall",
         "utils3d @ git+https://github.com/EasternJournalist/utils3d.git"
         "@9a4eb15e4021b67b12c460c7057d642626897ec1"])
+    # Flush cached utils3d so the reinstalled version is picked up
+    import importlib
+    importlib.invalidate_caches()
+    for key in list(sys.modules.keys()):
+        if "utils3d" in key:
+            del sys.modules[key]
 
     sys.path.insert(0, da3_dir)
     try:
