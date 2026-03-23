@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 
 BASE_DIR = os.path.dirname(__file__)
-DATASET_DIR = os.path.join(BASE_DIR, "..", "..", "test", "test")
+DATASET_DIR = os.environ.get("DATASET_DIR", os.path.join(BASE_DIR, "..", "..", "test", "test"))
 SAMPLE_FILE = os.path.join(BASE_DIR, "sample_images.txt")
 GRID_DIR = os.path.join(BASE_DIR, "comparison_grids")
 

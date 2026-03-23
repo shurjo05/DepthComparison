@@ -6,7 +6,10 @@ import torch
 from PIL import Image
 
 BASE_DIR = os.path.dirname(__file__)
-DATASET_DIR = os.path.join(BASE_DIR, "..", "..", "test", "test", "images")
+DATASET_DIR = os.path.join(
+    os.environ.get("DATASET_DIR", os.path.join(BASE_DIR, "..", "..", "test", "test")),
+    "images"
+)
 SAMPLE_FILE = os.path.join(BASE_DIR, "sample_images.txt")
 
 def load_sample_list():
