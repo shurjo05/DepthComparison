@@ -1,7 +1,8 @@
 torch
 torchvision
-transformers
-diffusers
+transformers>=4.48
 pillow
 opencv-python
 numpy
+scipy
+trimesh

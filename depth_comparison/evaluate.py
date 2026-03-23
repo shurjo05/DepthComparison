@@ -8,7 +8,7 @@ DATASET_DIR = os.environ.get("DATASET_DIR", os.path.join(BASE_DIR, "..", "..", "
 SAMPLE_FILE = os.path.join(BASE_DIR, "sample_images.txt")
 GRID_DIR = os.path.join(BASE_DIR, "comparison_grids")
 
-MODELS = ["depth_anything_v2", "depth_pro", "pixel_perfect", "vggt", "depth_anything_v3", "marigold"]
+MODELS = ["depth_pro", "moge2", "depthfm", "pixel_perfect", "vggt", "depth_anything_v3"]
 
 def load_sample_list():
     with open(SAMPLE_FILE) as f:
