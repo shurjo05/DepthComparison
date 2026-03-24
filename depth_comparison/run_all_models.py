@@ -51,7 +51,7 @@ def run_depth_pro(samples):
 
     processor = AutoImageProcessor.from_pretrained("apple/DepthPro-hf", trust_remote_code=True)
     model = AutoModelForDepthEstimation.from_pretrained(
-        "apple/DepthPro-hf", trust_remote_code=True, torch_dtype=torch.float16
+        "apple/DepthPro-hf", trust_remote_code=True, dtype=torch.float16
     ).cuda().eval()
 
     times = []
